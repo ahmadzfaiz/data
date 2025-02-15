@@ -21,13 +21,8 @@ driver.get("https://sahabat.pegadaian.co.id/harga-emas")
 driver.implicitly_wait(30)
 
 # Setup logger
-log_path = (
-  Path(__file__).parent.parent
-  / "logs"
-  / "harga_emas_pegadaian.log"
-)
 logging.basicConfig(
-  filename=log_path,
+  filename="logs/harga_emas_pegadaian.log",
   level=logging.INFO,
   format='%(asctime)s - %(levelname)s - %(message)s',
   datefmt="%Y-%m-%d %H:%M:%S"

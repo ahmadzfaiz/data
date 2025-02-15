@@ -6,7 +6,6 @@ import logging
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -29,14 +28,14 @@ wait.until(EC.presence_of_element_located((By.XPATH, '//*[@id="__nuxt"]')))
 
 # Scrape process
 title = driver.title
-logging.info(f"Page: {title}")
+print(f"INFO - Page: {title}")
 
 try:
   beli_emas_xpath = '//*[@id="__nuxt"]/div/div[2]/main/div[2]/div[2]/div/div/div/div/div/div[1]/div/div[2]/div[2]/div/div/div[1]'
   beli_emas_element = wait.until(EC.presence_of_element_located((By.XPATH, beli_emas_xpath)))
   beli_emas_text = beli_emas_element.text
 except Exception as e:
-  logging.error(f"Harga Beli: {str(e)}")
+  print(f"ERROR - Harga Beli: {str(e)}")
   beli_emas_text = None
 
 try:
@@ -44,7 +43,7 @@ try:
   jual_emas_element = wait.until(EC.presence_of_element_located((By.XPATH, jual_emas_xpath)))
   jual_emas_text = jual_emas_element.text
 except Exception as e:
-  logging.error(f"Harga Jual: {str(e)}")
+  print(f"ERROR - Harga Jual: {str(e)}")
   jual_emas_text = None
 
 def get_harga(text):
@@ -72,9 +71,9 @@ if beli_emas_text and jual_emas_text:
 
     writer.writerow(new_data)
 
-  logging.info("New row of harga emas added successfully!")
+  print("INFO - New row of harga emas added successfully!")
 
 else:
-  logging.warning("Pegadaian Harga page failed to scrape")
+  print("WARNING - Pegadaian Harga page failed to scrape")
 
 driver.quit()

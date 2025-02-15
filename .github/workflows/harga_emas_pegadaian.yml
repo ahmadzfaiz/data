@@ -26,14 +26,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Install Chrome & ChromeDriver
-        run: |
-          sudo apt update
-          sudo apt install -y google-chrome-stable
-          CHROME_VERSION=$(google-chrome --version | awk '{print $3}')
-          sudo apt install -y chromium-chromedriver
-          chromedriver --version
-
       - name: Run Scraper for Harga Pegadaian
         run: python -m bots.harga_emas_pegadaian
 

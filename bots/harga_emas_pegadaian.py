@@ -34,6 +34,7 @@ try:
   beli_emas_xpath = '//*[@id="__nuxt"]/div/div[2]/main/div[2]/div[2]/div/div/div/div/div/div[1]/div/div[2]/div[2]/div/div/div[1]'
   beli_emas_element = wait.until(EC.presence_of_element_located((By.XPATH, beli_emas_xpath)))
   beli_emas_text = beli_emas_element.text
+  print(f"INFO - Harga Beli: {beli_emas_text}")
 except Exception as e:
   print(f"ERROR - Harga Beli: {str(e)}")
   beli_emas_text = None
@@ -42,6 +43,7 @@ try:
   jual_emas_xpath = '//*[@id="__nuxt"]/div/div[2]/main/div[2]/div[2]/div/div/div/div/div/div[1]/div/div[2]/div[2]/div/div/div[2]'
   jual_emas_element = wait.until(EC.presence_of_element_located((By.XPATH, jual_emas_xpath)))
   jual_emas_text = jual_emas_element.text
+  print(f"INFO - Harga Jual: {jual_emas_text}")
 except Exception as e:
   print(f"ERROR - Harga Jual: {str(e)}")
   jual_emas_text = None

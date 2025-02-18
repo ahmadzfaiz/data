@@ -3,6 +3,7 @@ import datetime
 import re
 import uuid
 import logging
+from zoneinfo import ZoneInfo
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -59,7 +60,7 @@ if beli_emas_text and jual_emas_text:
     "id": str(uuid.uuid4()),
     "harga_beli": get_harga(beli_emas_text), 
     "harga_jual": get_harga(jual_emas_text), 
-    "timestamp": datetime.datetime.now()
+    "timestamp": datetime.datetime.now(ZoneInfo("Asia/Jakarta"))
   }
 
   output_file = "datasets/harga_emas_pegadaian.csv"

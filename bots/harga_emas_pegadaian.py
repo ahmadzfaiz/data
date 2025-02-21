@@ -22,7 +22,7 @@ options.add_argument("--window-size=1920x1080")
 
 # Setup Selenium driver
 driver = webdriver.Chrome(options=options)
-wait = WebDriverWait(driver, 10)
+wait = WebDriverWait(driver, 20)
 
 driver.get("https://sahabat.pegadaian.co.id/harga-emas")
 wait.until(EC.presence_of_element_located((By.XPATH, '//*[@id="__nuxt"]')))

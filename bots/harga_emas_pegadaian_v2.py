@@ -3,7 +3,7 @@ from src.harga_emas_pegadaian import HTMLDownloader, DataCleaning, DataStoring
 
 # --- Configuration ---
 LOG_FILE = "scraper.log"
-OUTPUT_FILE = "datasets/harga_emas_pegadaian_test.csv"
+OUTPUT_FILE = "datasets/harga_emas_pegadaian.csv"
 TARGET_URL = "https://sahabat.pegadaian.co.id/harga-emas"
 
 # Setup logging

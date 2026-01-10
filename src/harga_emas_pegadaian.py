@@ -111,28 +111,38 @@ class HTMLDownloader:
 
 
 class DataCleaning:
+    EXPECTED_PRICE_COUNT = 2
+
     def __init__(self, html_file):
         self.html_file = html_file
 
     def get_price_list(self):
-        with open(self.html_file, "r") as f:
+        with open(self.html_file, "r", encoding="utf-8") as f:
             soup = BeautifulSoup(f.read(), 'html.parser')
         return soup.find_all(string=re.compile("Rp "))
-        
+
     def run(self):
         raw_data = self.get_price_list()
-        return ["".join(re.findall(r'\d+', item)) for item in raw_data]
+        cleaned_prices = ["".join(re.findall(r'\d+', item)) for item in raw_data]
+
+        if len(cleaned_prices) < self.EXPECTED_PRICE_COUNT:
+            logging.error(f"Expected at least {self.EXPECTED_PRICE_COUNT} prices, found {len(cleaned_prices)}")
+            return None
+
+        logging.info(f"Extracted {len(cleaned_prices)} prices: {cleaned_prices[:self.EXPECTED_PRICE_COUNT]}")
+        return cleaned_prices
     
 
 class DataStoring:
-    def __init__(self, html_file, output_file,  price_list):
-        self.output_file = "datasets/harga_emas_pegadaian_test.csv"
-        self.price_list = price_list
+    def __init__(self, html_file, output_file, price_list):
         self.html_file = html_file
         self.output_file = output_file
-
+        self.price_list = price_list
 
     def process_new_data(self):
+        if not self.price_list or len(self.price_list) < 2:
+            raise ValueError(f"Invalid price list: expected at least 2 prices, got {len(self.price_list) if self.price_list else 0}")
+
         return {
             "id": uuid.uuid4(),
             "harga_beli": self.price_list[0],

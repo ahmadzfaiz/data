@@ -147,7 +147,7 @@ class DataStoring:
             "id": uuid.uuid4(),
             "harga_beli": self.price_list[0],
             "harga_jual": self.price_list[1],
-            "timestamp": datetime.now()
+            "timestamp": datetime.now(ZoneInfo("Asia/Jakarta"))
         }
 
     def insert_new_data(self):

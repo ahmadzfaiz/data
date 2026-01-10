@@ -27,7 +27,7 @@ jobs:
           pip install -r requirements.txt
 
       - name: Run Scraper for Harga Pegadaian
-        run: python -m bots.harga_emas_pegadaian
+        run: python -m bots.harga_emas_pegadaian_v2
 
       - name: Commit and Push Changes
         run: |

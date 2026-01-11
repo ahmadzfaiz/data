@@ -10,7 +10,8 @@ from typing import Optional
 
 from bs4 import BeautifulSoup
 
-import undetected_chromedriver as uc
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
@@ -25,15 +26,26 @@ class HTMLDownloader:
     """
     def __init__(self):
         """Initializes WebDriver and WebDriverWait."""
-        logging.info("Initializing Undetected ChromeDriver.")
-        options = uc.ChromeOptions()
+        logging.info("Initializing Selenium WebDriver.")
+        options = Options()
+        # Use new headless mode (Chrome 109+)
         options.add_argument("--headless=new")
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
         options.add_argument("--disable-gpu")
         options.add_argument("--window-size=1920,1080")
+        options.add_argument("--disable-blink-features=AutomationControlled")
+        options.add_argument("--disable-extensions")
 
-        self.driver = uc.Chrome(options=options)
+        # --- ANTI-BOT DETECTION MEASURES ---
+        options.add_experimental_option("excludeSwitches", ["enable-automation"])
+        options.add_experimental_option('useAutomationExtension', False)
+        options.add_argument("user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+
+        # Set page load strategy to avoid waiting for full load
+        options.page_load_strategy = 'eager'
+
+        self.driver = webdriver.Chrome(options=options)
         self.wait = WebDriverWait(self.driver, 60)
         self.driver.implicitly_wait(5)
 

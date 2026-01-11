@@ -84,9 +84,22 @@ class HTMLDownloader:
                 logging.error("Timeout waiting for anti-bot check to clear. The scraper may be blocked.")
                 return None
 
-            # Wait for dynamic content to render
-            time.sleep(10)
-            logging.info("Waited 10 seconds for dynamic content to render.")
+            # Wait for prices to load by polling page source
+            max_wait = 60  # Maximum wait time in seconds
+            poll_interval = 2  # Check every 2 seconds
+            elapsed = 0
+
+            logging.info("Waiting for price data to load...")
+            while elapsed < max_wait:
+                page_source = self.driver.page_source
+                if "Rp " in page_source:
+                    logging.info(f"Price data detected after {elapsed} seconds.")
+                    break
+                time.sleep(poll_interval)
+                elapsed += poll_interval
+                logging.info(f"Still waiting for prices... ({elapsed}s elapsed)")
+            else:
+                logging.warning(f"Price data not detected after {max_wait} seconds. Saving HTML anyway for debugging.")
 
             page_title = self.driver.title
             logging.info(f"Page Title: {page_title}")
@@ -181,4 +194,4 @@ class DataStoring:
 
     def run(self):
         self.insert_new_data()
-        # os.remove(self.html_file)
+        os.remove(self.html_file)

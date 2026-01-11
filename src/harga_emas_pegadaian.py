@@ -85,8 +85,8 @@ class HTMLDownloader:
                 return None
 
             # Wait for dynamic content to render
-            time.sleep(5)
-            logging.info("Waited 5 seconds for dynamic content to render.")
+            time.sleep(10)
+            logging.info("Waited 10 seconds for dynamic content to render.")
 
             page_title = self.driver.title
             logging.info(f"Page Title: {page_title}")
@@ -121,15 +121,34 @@ class DataCleaning:
             soup = BeautifulSoup(f.read(), 'html.parser')
         return soup.find_all(string=re.compile("Rp "))
 
+    def _check_loading_state(self):
+        """Check if the page is still in loading state."""
+        with open(self.html_file, "r", encoding="utf-8") as f:
+            content = f.read()
+
+        loading_indicators = ['loading-spinner', 'skeleton', 'nuxt-loading']
+        found_indicators = [ind for ind in loading_indicators if ind.lower() in content.lower()]
+
+        return found_indicators
+
     def run(self):
         raw_data = self.get_price_list()
         cleaned_prices = ["".join(re.findall(r'\d+', item)) for item in raw_data]
 
         if len(cleaned_prices) < self.EXPECTED_PRICE_COUNT:
             logging.error(f"Expected at least {self.EXPECTED_PRICE_COUNT} prices, found {len(cleaned_prices)}")
+
+            # Check if page is still loading
+            loading_indicators = self._check_loading_state()
+            if loading_indicators:
+                logging.error(f"Page appears to still be loading. Found indicators: {loading_indicators}")
+                logging.error("Consider increasing the wait time for dynamic content to render.")
+            else:
+                logging.error("No loading indicators found, but prices are missing. Page structure may have changed.")
+
             return None
 
-        logging.info(f"Extracted {len(cleaned_prices)} prices: {cleaned_prices[:self.EXPECTED_PRICE_COUNT]}")
+        logging.info(f"Prices loaded successfully. Extracted {len(cleaned_prices)} prices: {cleaned_prices[:self.EXPECTED_PRICE_COUNT]}")
         return cleaned_prices
     
 
@@ -162,4 +181,4 @@ class DataStoring:
 
     def run(self):
         self.insert_new_data()
-        os.remove(self.html_file)
+        # os.remove(self.html_file)

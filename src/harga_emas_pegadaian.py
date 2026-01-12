@@ -7,9 +7,8 @@ import time
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from typing import Optional
-from pathlib import Path
 
-import yaml
+import requests
 from bs4 import BeautifulSoup
 
 from selenium import webdriver
@@ -19,7 +18,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, WebDriverException
 
 TARGET_URL = "https://sahabat.pegadaian.co.id/harga-emas"
-PROXY_FILE = Path(__file__).parent / "proxies" / "2026-01.yaml"
+PROXY_API_URL = "https://api.proxyscrape.com/v4/free-proxy-list/get?request=display_proxies&country=id&proxy_format=protocolipport&format=json&timeout=20000"
 
 class HTMLDownloader:
     """
@@ -78,23 +77,29 @@ class HTMLDownloader:
         self.quit_driver()
 
     @staticmethod
-    def load_proxies(proxy_file: Path = PROXY_FILE) -> list[dict]:
-        """Load proxies from YAML file, sorted by uptime (highest first)."""
-        if not proxy_file.exists():
-            logging.warning(f"Proxy file not found: {proxy_file}")
+    def load_proxies(api_url: str = PROXY_API_URL) -> list[dict]:
+        """Fetch proxies from API, sorted by uptime (highest first)."""
+        try:
+            logging.info("Fetching fresh proxy list from API...")
+            response = requests.get(api_url, timeout=30)
+            response.raise_for_status()
+            data = response.json()
+
+            proxies = data.get("proxies", [])
+            # Filter only alive proxies and sort by uptime (highest first)
+            alive_proxies = [p for p in proxies if p.get("alive", False)]
+            alive_proxies.sort(key=lambda x: x.get("uptime", 0), reverse=True)
+
+            logging.info(f"Fetched {len(alive_proxies)} alive proxies from API")
+            return alive_proxies
+
+        except requests.RequestException as e:
+            logging.warning(f"Failed to fetch proxies from API: {e}")
             return []
-
-        with open(proxy_file, "r") as f:
-            data = yaml.safe_load(f)
-
-        proxies = data.get("proxies", [])
-        # Sort by uptime percentage (highest first)
-        proxies.sort(key=lambda x: int(x.get("uptime", "0%").rstrip("%")), reverse=True)
-        return proxies
 
     @staticmethod
     def format_proxy(proxy_dict: dict) -> str:
-        """Format proxy dict to proxy string."""
+        """Format proxy dict to proxy string (ip:port format for Chrome)."""
         return f"{proxy_dict['ip']}:{proxy_dict['port']}"
 
     def _save_to_html(self, content: str, filename: str) -> str:
@@ -165,15 +170,15 @@ class HTMLDownloader:
             return None
 
     @classmethod
-    def run_with_proxy_rotation(cls, proxy_file: Path = PROXY_FILE) -> Optional[str]:
+    def run_with_proxy_rotation(cls, api_url: str = PROXY_API_URL) -> Optional[str]:
         """
-        Run scraper with proxy rotation. Tries each proxy until one succeeds.
-        Falls back to no proxy if all proxies fail.
+        Run scraper with proxy rotation. Fetches fresh proxies from API and
+        tries each proxy until one succeeds. Falls back to no proxy if all fail.
 
         Returns:
             The filename of the saved HTML, or None if all attempts fail.
         """
-        proxies = cls.load_proxies(proxy_file)
+        proxies = cls.load_proxies(api_url)
 
         if not proxies:
             logging.warning("No proxies available. Running without proxy.")
@@ -186,7 +191,8 @@ class HTMLDownloader:
         # Try each proxy
         for i, proxy_dict in enumerate(proxies):
             proxy_str = cls.format_proxy(proxy_dict)
-            logging.info(f"Attempting proxy {i + 1}/{len(proxies)}: {proxy_str} (uptime: {proxy_dict.get('uptime', 'N/A')})")
+            uptime = proxy_dict.get('uptime', 0)
+            logging.info(f"Attempting proxy {i + 1}/{len(proxies)}: {proxy_str} (uptime: {uptime:.1f}%)")
 
             downloader = None
             try:

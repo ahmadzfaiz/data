@@ -7,26 +7,36 @@ import time
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from typing import Optional
+from pathlib import Path
 
+import yaml
 from bs4 import BeautifulSoup
 
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException
+from selenium.common.exceptions import TimeoutException, WebDriverException
 
 TARGET_URL = "https://sahabat.pegadaian.co.id/harga-emas"
+PROXY_FILE = Path(__file__).parent / "proxies" / "2026-01.yaml"
 
 class HTMLDownloader:
     """
     Downloads the dynamic HTML content from the Pegadaian website using Selenium.
-    This class is strictly for downloading and saving the HTML source after the 
+    This class is strictly for downloading and saving the HTML source after the
     main dynamic content has loaded, without validating specific price values.
+    Supports proxy rotation for resilient scraping.
     """
-    def __init__(self):
-        """Initializes WebDriver and WebDriverWait."""
-        logging.info("Initializing Selenium WebDriver.")
+    def __init__(self, proxy: Optional[str] = None):
+        """Initializes WebDriver and WebDriverWait with optional proxy."""
+        self.proxy = proxy
+        self.driver = None
+        self._init_driver()
+
+    def _init_driver(self):
+        """Initialize the Chrome WebDriver with current settings."""
+        logging.info(f"Initializing Selenium WebDriver{f' with proxy {self.proxy}' if self.proxy else ''}.")
         options = Options()
         # Use new headless mode (Chrome 109+)
         options.add_argument("--headless=new")
@@ -42,6 +52,10 @@ class HTMLDownloader:
         options.add_experimental_option('useAutomationExtension', False)
         options.add_argument("user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
 
+        # Add proxy if provided
+        if self.proxy:
+            options.add_argument(f"--proxy-server={self.proxy}")
+
         # Set page load strategy to avoid waiting for full load
         options.page_load_strategy = 'eager'
 
@@ -49,11 +63,39 @@ class HTMLDownloader:
         self.wait = WebDriverWait(self.driver, 60)
         self.driver.implicitly_wait(5)
 
+    def quit_driver(self):
+        """Quit the current driver."""
+        if self.driver:
+            try:
+                self.driver.quit()
+                logging.info("Selenium WebDriver quit successfully.")
+            except Exception:
+                pass
+            self.driver = None
+
     def __del__(self):
         """Ensures the driver quits when the object is destroyed."""
-        if hasattr(self, 'driver'):
-            self.driver.quit()
-            logging.info("Selenium WebDriver quit successfully.")
+        self.quit_driver()
+
+    @staticmethod
+    def load_proxies(proxy_file: Path = PROXY_FILE) -> list[dict]:
+        """Load proxies from YAML file, sorted by uptime (highest first)."""
+        if not proxy_file.exists():
+            logging.warning(f"Proxy file not found: {proxy_file}")
+            return []
+
+        with open(proxy_file, "r") as f:
+            data = yaml.safe_load(f)
+
+        proxies = data.get("proxies", [])
+        # Sort by uptime percentage (highest first)
+        proxies.sort(key=lambda x: int(x.get("uptime", "0%").rstrip("%")), reverse=True)
+        return proxies
+
+    @staticmethod
+    def format_proxy(proxy_dict: dict) -> str:
+        """Format proxy dict to proxy string."""
+        return f"{proxy_dict['ip']}:{proxy_dict['port']}"
 
     def _save_to_html(self, content: str, filename: str) -> str:
         """Saves the provided content to an HTML file."""
@@ -121,6 +163,57 @@ class HTMLDownloader:
         except Exception as e:
             logging.critical(f"A fatal error occurred during the HTML download process: {e}")
             return None
+
+    @classmethod
+    def run_with_proxy_rotation(cls, proxy_file: Path = PROXY_FILE) -> Optional[str]:
+        """
+        Run scraper with proxy rotation. Tries each proxy until one succeeds.
+        Falls back to no proxy if all proxies fail.
+
+        Returns:
+            The filename of the saved HTML, or None if all attempts fail.
+        """
+        proxies = cls.load_proxies(proxy_file)
+
+        if not proxies:
+            logging.warning("No proxies available. Running without proxy.")
+            downloader = cls()
+            try:
+                return downloader.run_scraper()
+            finally:
+                downloader.quit_driver()
+
+        # Try each proxy
+        for i, proxy_dict in enumerate(proxies):
+            proxy_str = cls.format_proxy(proxy_dict)
+            logging.info(f"Attempting proxy {i + 1}/{len(proxies)}: {proxy_str} (uptime: {proxy_dict.get('uptime', 'N/A')})")
+
+            downloader = None
+            try:
+                downloader = cls(proxy=proxy_str)
+                result = downloader.run_scraper()
+
+                if result:
+                    logging.info(f"Successfully scraped using proxy: {proxy_str}")
+                    return result
+                else:
+                    logging.warning(f"Proxy {proxy_str} failed to get valid result. Trying next proxy...")
+
+            except WebDriverException as e:
+                logging.warning(f"Proxy {proxy_str} failed with WebDriver error: {e}. Trying next proxy...")
+            except Exception as e:
+                logging.warning(f"Proxy {proxy_str} failed with error: {e}. Trying next proxy...")
+            finally:
+                if downloader:
+                    downloader.quit_driver()
+
+        # All proxies failed, try without proxy as last resort
+        logging.warning("All proxies failed. Attempting without proxy as fallback...")
+        downloader = cls()
+        try:
+            return downloader.run_scraper()
+        finally:
+            downloader.quit_driver()
 
 
 class DataCleaning:

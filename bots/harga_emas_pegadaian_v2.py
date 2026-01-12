@@ -17,12 +17,17 @@ logging.basicConfig(
 )
 
 
-# STEP 1: Download the HTML using Selenium with proxy rotation
+# STEP 1: Download the HTML using Selenium
 html_filename = None
+downloader = None
 try:
-    html_filename = HTMLDownloader.run_scraper()
+    downloader = HTMLDownloader()
+    html_filename = downloader.run_scraper()
 except Exception as e:
     logging.critical(f"HTML Downloader failed to run: {e}")
+finally:
+    if downloader:
+        downloader.quit_driver()
 
 if not html_filename:
     logging.critical("Failed to download HTML. Exiting.")

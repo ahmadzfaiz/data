@@ -13,9 +13,11 @@ from bs4 import BeautifulSoup
 
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service as ChromeService
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, WebDriverException
+from webdriver_manager.chrome import ChromeDriverManager
 
 TARGET_URL = "https://sahabat.pegadaian.co.id/harga-emas"
 PROXY_API_URL = "https://api.proxyscrape.com/v4/free-proxy-list/get?request=display_proxies&country=id&proxy_format=protocolipport&format=json&timeout=20000"
@@ -58,7 +60,8 @@ class HTMLDownloader:
         # Set page load strategy to avoid waiting for full load
         options.page_load_strategy = 'eager'
 
-        self.driver = webdriver.Chrome(options=options)
+        service = ChromeService(ChromeDriverManager().install())
+        self.driver = webdriver.Chrome(service=service, options=options)
         self.wait = WebDriverWait(self.driver, 60)
         self.driver.implicitly_wait(5)
 
